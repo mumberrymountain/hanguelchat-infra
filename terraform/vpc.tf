@@ -15,7 +15,9 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.project_name}-public-subnet-1"
+    Name                                                = "${var.project_name}-public-subnet-1"
+    "kubernetes.io/role/elb"                            = "1"
+    "kubernetes.io/cluster/${var.project_name}-cluster" = "shared"
   }
 }
 
@@ -26,7 +28,9 @@ resource "aws_subnet" "public_2" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.project_name}-public-subnet-2"
+    Name                                                = "${var.project_name}-public-subnet-2"
+    "kubernetes.io/role/elb"                            = "1"
+    "kubernetes.io/cluster/${var.project_name}-cluster" = "shared"
   }
 }
 
@@ -36,7 +40,21 @@ resource "aws_subnet" "private" {
   availability_zone = var.availability_zone
 
   tags = {
-    Name = "${var.project_name}-private-subnet"
+    Name                                                = "${var.project_name}-private-subnet-1"
+    "kubernetes.io/role/internal-elb"                   = "1"
+    "kubernetes.io/cluster/${var.project_name}-cluster" = "shared"
+  }
+}
+
+resource "aws_subnet" "private_2" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.private_subnet_cidr_2
+  availability_zone = var.availability_zone_2
+
+  tags = {
+    Name                                                = "${var.project_name}-private-subnet-2"
+    "kubernetes.io/role/internal-elb"                   = "1"
+    "kubernetes.io/cluster/${var.project_name}-cluster" = "shared"
   }
 }
 
@@ -102,3 +120,7 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
+resource "aws_route_table_association" "private_2" {
+  subnet_id      = aws_subnet.private_2.id
+  route_table_id = aws_route_table.private.id
+}
