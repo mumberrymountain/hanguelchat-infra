@@ -18,13 +18,28 @@
 
 | 구분 | 구성 요소 | 설명 | Terraform 리소스 |
 |------|-----------|------|------------------|
-| **입구** | Route 53, ACM | DNS, TLS(NLB·ingress 연동) | 콘솔 관리, `var.acm_certificate_arn` |
-| **네트워크** | VPC, IGW, 퍼블릭/프라이빗 서브넷 | NLB·NAT·EKS 노드 배치 | `aws_vpc.main`, `aws_subnet.*`, `aws_internet_gateway.main` |
-| **클러스터** | EKS, 노드 그룹 | 관리형 컨트롤 플레인, OIDC(IRSA) | `aws_eks_cluster.main`, `aws_eks_node_group.main` |
-| **스토리지** | EBS CSI, StorageClass `gp3` | PVC·EBS | `aws_eks_addon.ebs_csi`, `kubernetes_storage_class_v1.ebs_gp3` |
-| **로드밸런싱** | AWS LB Controller (Helm) | Ingress용 NLB | `helm_release.aws_lb_controller` |
-| **애드온** | vpc-cni, CoreDNS, kube-proxy | EKS 애드온 | `aws_eks_addon.*` |
-| **기타** | NAT+EIP, SG, VPC 엔드포인트 | 아웃바운드, SSM 등 | `nat_instance.tf`, `security_groups.tf`, `vpc_endpoints.tf` |
+| **입구** | Route 53 | 도메인·DNS 라우팅 | AWS 콘솔에서 관리 |
+| | ACM | TLS 인증서(NLB·ingress-nginx 연동) | 콘솔 발급, `var.acm_certificate_arn` |
+| **네트워크** | VPC | 다중 AZ, 퍼블릭/프라이빗 분리 | `aws_vpc.main` |
+| | Internet Gateway | VPC ↔ 인터넷 | `aws_internet_gateway.main` |
+| | 퍼블릭 서브넷 | NLB·NAT 배치(AZ 2개) | `aws_subnet.public`, `aws_subnet.public_2` |
+| | 프라이빗 서브넷 | EKS 노드 배치(AZ 2개) | `aws_subnet.private`, `aws_subnet.private_2` |
+| | NAT 인스턴스 | 프라이빗 아웃바운드 | `aws_instance.nat` |
+| | NAT용 Elastic IP | NAT 고정 공인 IP | `aws_eip.nat_instance` |
+| **클러스터** | EKS 클러스터 | 관리형 API 서버 | `aws_eks_cluster.main` |
+| | OIDC 공급자 | IRSA용 | `aws_iam_openid_connect_provider.eks` |
+| | Managed Node Group | 워커 노드(min/max/desired) | `aws_eks_node_group.main` |
+| | 클러스터·노드 IAM 역할 | EKS·워커 정책 부착 | `aws_iam_role.eks_cluster`, `aws_iam_role.eks_node` |
+| **애드온** | Amazon VPC CNI | Pod 네트워킹 | `aws_eks_addon.vpc_cni` |
+| | CoreDNS | 클러스터 DNS | `aws_eks_addon.coredns` |
+| | kube-proxy | Service→Pod 프록시 | `aws_eks_addon.kube_proxy` |
+| **스토리지** | EBS CSI Driver | EBS 동적 프로비저닝 | `aws_eks_addon.ebs_csi` |
+| | EBS CSI IAM 역할 | IRSA | `aws_iam_role.ebs_csi` |
+| | StorageClass `gp3` | 기본 PVC 스토리지 | `kubernetes_storage_class_v1.ebs_gp3` |
+| **로드밸런싱** | AWS LB Controller | Ingress→NLB 프로비저닝(Helm) | `helm_release.aws_lb_controller` |
+| | LB Controller IAM 역할 | IRSA | `aws_iam_role.aws_lb_controller` |
+| **보안·관리** | Security Group | NAT·엔드포인트 등 트래픽 제어 | `security_groups.tf` 내 리소스 |
+| | VPC 엔드포인트 | SSM·SSM Messages·EC2 Messages·STS 등 | `aws_vpc_endpoint.*` |
 
 ### 트래픽 흐름
 
