@@ -1,0 +1,20 @@
+controller:
+  service:
+    targetPorts:
+      http: http
+      https: http
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "ACM_ARN_PLACEHOLDER"
+      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+      # TLS NLB는 기본값으로 클라 IP를 안 넘겨 $remote_addr가 VPC/NLB 쪽이 됨 →
+      # Ingress whitelist-source-range가 항상 불일치 → nginx 403.
+      service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
+  config:
+    use-forwarded-headers: "true"
+    proxy-real-ip-cidr: "0.0.0.0/0"
+    hsts: "true"
+    hsts-max-age: "31536000"

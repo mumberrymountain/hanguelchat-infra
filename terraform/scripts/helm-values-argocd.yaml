@@ -1,0 +1,7 @@
+configs:
+  params:
+    server.insecure: "true"
+    # 서브패스 + 리버스 프록시 뒤에서는 외부 URL 필수 (리다이렉트/CSRF 등에서 403 유발 가능)
+    server.url: "https://hanguelchat.link/argoCD"
+    server.rootpath: "/argoCD"
+    server.basehref: "/argoCD"
