@@ -7,13 +7,13 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: https://github.com/mumberrymountain/hanguelchat.git
+    - repoURL: https://github.com/mumberrymountain/hanguelchat-infra.git
       targetRevision: main
       path: k8s/prod/mysql
-    - repoURL: https://github.com/mumberrymountain/hanguelchat.git
+    - repoURL: https://github.com/mumberrymountain/hanguelchat-infra.git
       targetRevision: main
       path: k8s/prod/redis
-    - repoURL: https://github.com/mumberrymountain/hanguelchat.git
+    - repoURL: https://github.com/mumberrymountain/hanguelchat-infra.git
       targetRevision: main
       path: k8s/prod/ingress
   destination:
