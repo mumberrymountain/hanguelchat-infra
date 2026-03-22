@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: mysql
+
+spec:
+  serviceName: mysql-headless
+  replicas: 2
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      app: hangeul-chat-mysql
+  template:
+    metadata:
+      labels:
+        app: hangeul-chat-mysql
+    spec:
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 1001
+      initContainers:
+        - name: mariadb-conf-init
+          image: docker.io/bitnamilegacy/mariadb:11.4.7-debian-12-r2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              shopt -s dotglob nullglob
+              if [[ ! -f /mnt/conf/my.cnf ]]; then
+                cp -a /opt/bitnami/mariadb/conf/. /mnt/conf/
+              fi
+              chown -R 1001:1001 /mnt/conf
+          volumeMounts:
+            - name: mariadb-conf
+              mountPath: /mnt/conf
+      containers:
+        - name: mariadb
+          image: docker.io/bitnamilegacy/mariadb:11.4.7-debian-12-r2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 150m
+              memory: 384Mi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+          ports:
+            - name: mysql
+              containerPort: 3306
+          envFrom:
+            - secretRef:
+                name: mysql-secret
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              ORD="${HOSTNAME##*-}"
+              if [[ "$ORD" == "0" ]]; then
+                export MARIADB_REPLICATION_MODE=master
+                : "${MARIADB_ROOT_PASSWORD:?MARIADB_ROOT_PASSWORD is required}"
+                : "${MARIADB_USER:?MARIADB_USER is required}"
+                : "${MARIADB_PASSWORD:?MARIADB_PASSWORD is required}"
+                : "${MARIADB_DATABASE:?MARIADB_DATABASE is required}"
+              else
+                export MARIADB_REPLICATION_MODE=slave
+                : "${MARIADB_ROOT_PASSWORD:?MARIADB_ROOT_PASSWORD is required}"
+                : "${MARIADB_REPLICATION_USER:?MARIADB_REPLICATION_USER is required}"
+                : "${MARIADB_REPLICATION_PASSWORD:?MARIADB_REPLICATION_PASSWORD is required}"
+                export MARIADB_MASTER_HOST="mysql-0.mysql-headless"
+                export MARIADB_MASTER_PORT_NUMBER="3306"
+                export MARIADB_MASTER_ROOT_USER=root
+                export MARIADB_MASTER_ROOT_PASSWORD="$MARIADB_ROOT_PASSWORD"
+              fi
+              exec /opt/bitnami/scripts/mariadb/entrypoint.sh /opt/bitnami/scripts/mariadb/run.sh
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/mariadb
+            - name: mariadb-conf
+              mountPath: /opt/bitnami/mariadb/conf
+            - name: mariadb-tmp
+              mountPath: /opt/bitnami/mariadb/tmp
+            - name: mysql-entrypoint-initdb
+              mountPath: /docker-entrypoint-initdb.d
+          startupProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb-admin ping -h 127.0.0.1 -uroot
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb-admin ping -h 127.0.0.1 -uroot
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 8
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  export MYSQL_PWD="$MARIADB_ROOT_PASSWORD"
+                  mariadb-admin ping -h 127.0.0.1 -uroot --silent >/dev/null 2>&1
+                  [[ "${HOSTNAME##*-}" == "0" ]] && exit 0
+                  status=$(mariadb -h 127.0.0.1 -uroot -e "SHOW SLAVE STATUS\G" 2>/dev/null)
+                  io=$(echo "$status" | awk '/Slave_IO_Running:/{print $2}')
+                  sql=$(echo "$status" | awk '/Slave_SQL_Running:/{print $2}')
+                  lag=$(echo "$status" | awk '/Seconds_Behind_Master:/{print $2}')
+                  [[ "$io" == "Yes" && "$sql" == "Yes" && "${lag:-999}" -le 300 ]] && exit 0
+                  echo "replication not ready: io=$io sql=$sql lag=$lag" >&2
+                  exit 1
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: mariadb-conf
+          emptyDir: {}
+        - name: mariadb-tmp
+          emptyDir: {}
+        - name: mysql-entrypoint-initdb
+          configMap:
+            name: mysql-init-config
+            defaultMode: 0755
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 10Gi

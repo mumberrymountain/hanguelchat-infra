@@ -1,0 +1,96 @@
+# Redis 파드 2개: redis-0 primary, redis-1 replica. 클라이언트는 Sentinel 경유(백엔드 env).
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: redis
+
+spec:
+  serviceName: redis-headless
+  replicas: 3
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      app: hangeul-chat-redis
+  template:
+    metadata:
+      labels:
+        app: hangeul-chat-redis
+    spec:
+      securityContext:
+        fsGroup: 1001
+      containers:
+        - name: redis
+          image: docker.io/bitnamilegacy/redis:7.4.3-debian-12-r0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 768Mi
+          ports:
+            - name: redis
+              containerPort: 6379
+          envFrom:
+            - secretRef:
+                name: redis-secret
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              export REDIS_REPLICA_IP="${HOSTNAME}.redis-headless"
+              export REDIS_REPLICA_PORT="6379"
+              : "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
+              ORD="${HOSTNAME##*-}"
+              if [[ "$ORD" == "0" ]]; then
+                export REDIS_REPLICATION_MODE=master
+              else
+                export REDIS_REPLICATION_MODE=slave
+                export REDIS_MASTER_HOST="redis-0.redis-headless"
+                export REDIS_MASTER_PORT_NUMBER="6379"
+                export REDIS_MASTER_PASSWORD="$REDIS_PASSWORD"
+              fi
+              exec /opt/bitnami/scripts/redis/entrypoint.sh /opt/bitnami/scripts/redis/run.sh
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/redis
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - REDISCLI_AUTH="$REDIS_PASSWORD" /opt/bitnami/redis/bin/redis-cli ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - REDISCLI_AUTH="$REDIS_PASSWORD" /opt/bitnami/redis/bin/redis-cli ping
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 3
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi

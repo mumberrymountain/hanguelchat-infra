@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: frontend-deployment
+
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hangeul-chat-frontend
+  
+  template:
+    metadata:
+      labels: 
+        app: hangeul-chat-frontend
+    spec:
+      containers:
+        - name: hangeul-chat-frontend
+          image: hangeul-chat-frontend
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000

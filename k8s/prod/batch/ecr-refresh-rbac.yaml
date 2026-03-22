@@ -1,0 +1,32 @@
+# ServiceAccount for ECR token refresh CronJob
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecr-refresh
+  namespace: default
+---
+# Role: allow get/list/create/update/patch secrets in default namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ecr-refresh-secrets
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+# RoleBinding: bind Role to ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ecr-refresh-secrets
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ecr-refresh-secrets
+subjects:
+  - kind: ServiceAccount
+    name: ecr-refresh
+    namespace: default

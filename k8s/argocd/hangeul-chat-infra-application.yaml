@@ -1,0 +1,24 @@
+# MySQL·Redis·Ingress·배치 등 앱 외 인프라. Argo CD 2.6+ 다중 sources 필요.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hangeul-chat-infra
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://github.com/mumberrymountain/hanguelchat.git
+      targetRevision: main
+      path: k8s/prod/mysql
+    - repoURL: https://github.com/mumberrymountain/hanguelchat.git
+      targetRevision: main
+      path: k8s/prod/redis
+    - repoURL: https://github.com/mumberrymountain/hanguelchat.git
+      targetRevision: main
+      path: k8s/prod/ingress
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

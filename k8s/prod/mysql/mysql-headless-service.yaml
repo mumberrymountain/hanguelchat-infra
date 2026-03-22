@@ -1,0 +1,16 @@
+# StatefulSet 안정 DNS: mysql-0.mysql-headless, mysql-1.mysql-headless …
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: mysql-headless
+
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: hangeul-chat-mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306

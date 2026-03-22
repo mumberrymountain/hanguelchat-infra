@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hangeul-chat-frontend
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mumberrymountain/hanguelchat.git
+    targetRevision: main
+    path: k8s/prod/frontend
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default

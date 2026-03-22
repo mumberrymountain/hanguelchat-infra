@@ -1,0 +1,98 @@
+# Sentinel 2개·quorum=1 (소규모 노드 부담 완화). 프로덕션 HA는 3+·quorum 2 권장.
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: redis-sentinel
+
+spec:
+  serviceName: redis-sentinel-headless
+  replicas: 2
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: hangeul-chat-redis-sentinel
+  template:
+    metadata:
+      labels:
+        app: hangeul-chat-redis-sentinel
+    spec:
+      securityContext:
+        fsGroup: 1001
+      containers:
+        - name: redis-sentinel
+          image: docker.io/bitnamilegacy/redis-sentinel:7.4.3-debian-12-r0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 30m
+              memory: 48Mi
+            limits:
+              cpu: 150m
+              memory: 192Mi
+          ports:
+            - name: sentinel
+              containerPort: 26379
+          env:
+            - name: REDIS_MASTER_HOST
+              value: redis-0.redis-headless
+            - name: REDIS_MASTER_PORT_NUMBER
+              value: "6379"
+            - name: REDIS_MASTER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
+            - name: REDIS_MASTER_SET
+              value: mymaster
+            - name: REDIS_SENTINEL_QUORUM
+              value: "2"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              export REDIS_SENTINEL_ANNOUNCE_IP="${POD_IP}"
+              exec /opt/bitnami/scripts/redis-sentinel/entrypoint.sh /opt/bitnami/scripts/redis-sentinel/run.sh
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/redis-sentinel/data
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - redis-cli -h 127.0.0.1 -p 26379 ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - redis-cli -h 127.0.0.1 -p 26379 ping
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 3
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
