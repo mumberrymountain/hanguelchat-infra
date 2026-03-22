@@ -55,3 +55,6 @@ terraform.tfvars
 *.tfvars
 !terraform.tfvars.example
 terraform/.helm-bootstrap/
+
+*-secret.yaml
+*-secret.yaml
