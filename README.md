@@ -73,7 +73,9 @@
 
 ### CD (이 저장소 + Argo CD)
 
-<img width="864" height="474" alt="Image" src="https://github.com/user-attachments/assets/1fb154bb-f7f5-4967-b2c7-ad173b549190" />
+<img width="864" height="474" alt="Image" src="https://github.com/user-attachments/assets/8cbdb832-1574-4de0-85fb-9413c033a07b" />
+
+<br/><br/>
 
 - Argo CD는 클러스터에 Helm으로 설치, **`k8s/argocd/`** Application으로 Git 동기화.
 - `hangeul-chat-frontend` → `k8s/prod/frontend`, `hangeul-chat-backend` → `k8s/prod/backend`, `hangeul-chat-infra` → 다중 sources(`mysql`, `redis`, `ingress`).
