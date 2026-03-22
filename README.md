@@ -97,7 +97,7 @@
 | StatefulSet | `prod/mysql`, `prod/redis`(마스터·Sentinel) | DB·캐시 |
 | Ingress | `hangeul-chat-ingress`, `argocd-ingress` | 경로·호스트 라우팅 |
 | Service | frontend/backend, MySQL·Redis 등 | 클러스터 내부 통신 |
-| 스토리지 | PVC, `gp3` | EBS CSI |
+| 스토리지 | PVC, gp3 | EBS CSI |
 
 ---
 
