@@ -1,5 +1,5 @@
 resource "aws_instance" "nat" {
-  ami                         = var.ec2_ami
+  ami                         = var.nat_instance_ami
   instance_type               = var.nat_instance_type
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.nat.id]

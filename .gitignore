@@ -54,3 +54,4 @@ logs/
 terraform.tfvars
 *.tfvars
 !terraform.tfvars.example
+terraform/.helm-bootstrap/

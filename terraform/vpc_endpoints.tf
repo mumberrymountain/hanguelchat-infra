@@ -26,7 +26,7 @@ resource "aws_vpc_endpoint" "ssm" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ssm"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.private.id]
+  subnet_ids          = [aws_subnet.private.id, aws_subnet.private_2.id]
   security_group_ids  = [aws_security_group.vpc_endpoint.id]
   private_dns_enabled = true
 
@@ -39,7 +39,7 @@ resource "aws_vpc_endpoint" "ssm_messages" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ssmmessages"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.private.id]
+  subnet_ids          = [aws_subnet.private.id, aws_subnet.private_2.id]
   security_group_ids  = [aws_security_group.vpc_endpoint.id]
   private_dns_enabled = true
 
@@ -52,7 +52,7 @@ resource "aws_vpc_endpoint" "ec2_messages" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ec2messages"
   vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.private.id]
+  subnet_ids          = [aws_subnet.private.id, aws_subnet.private_2.id]
   security_group_ids  = [aws_security_group.vpc_endpoint.id]
   private_dns_enabled = true
 
@@ -61,3 +61,15 @@ resource "aws_vpc_endpoint" "ec2_messages" {
   }
 }
 
+resource "aws_vpc_endpoint" "sts" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.sts"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.private.id, aws_subnet.private_2.id]
+  security_group_ids  = [aws_security_group.vpc_endpoint.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name = "${var.project_name}-sts-endpoint"
+  }
+}
